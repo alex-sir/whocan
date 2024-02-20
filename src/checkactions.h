@@ -1,7 +1,7 @@
 /**
  *  Alex Carbajal
  *  CPT_S 360, Spring 2024
- *  whocan 
+ *  whocan
  */
 
 #ifndef CHECKACTIONS
@@ -13,4 +13,6 @@
 #include <errno.h>
 #include <pwd.h>
 
-#endif 
+extern void checkcd(const char *fsobj);
+
+#endif

@@ -5,3 +5,8 @@
  */
    
 #include "checkactions.h"
+
+void checkcd(const char *fsobj)
+{
+    
+}
