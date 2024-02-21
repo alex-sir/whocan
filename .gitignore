@@ -1,2 +1,4 @@
 *.o
 whocan
+.vscode
+test

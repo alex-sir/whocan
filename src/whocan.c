@@ -7,24 +7,25 @@
 #include "checkactions.h"
 #include "helpers.h"
 
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
+#include <stdio.h>    // for printf()
+#include <string.h>   // for strcmp()
+#include <sys/stat.h> // for struct stat
 
 int main(int argc, char const *argv[])
 {
     // invalid arguments
-    if (argc <= 2 || argc > 3)
+    if (argc != 3)
     {
         printf("Usage: ./whocan [ACTION] [FSOBJ]\n");
         return 0;
     }
 
-    // TODO: first check if fsobj is a valid file
     const char *action = argv[1], *fsobj = argv[2];
+    struct stat fsobj_info;
     if (strcmp(action, "cd") == 0) // directory
     {
-        checkcd(fsobj);
+        checkfsobj_dir(fsobj, &fsobj_info);
+        checkcd(&fsobj_info);
     }
     else if (strcmp(action, "delete") == 0) // all
     {
@@ -52,7 +53,7 @@ int main(int argc, char const *argv[])
     }
     else
     {
-        printInvalidAction(action);
+        print_invalid_action(action);
     }
 
     return 0;

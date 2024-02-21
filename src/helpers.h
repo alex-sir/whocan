@@ -7,14 +7,17 @@
 #ifndef HELPERS
 #define HELPERS
 
-#include <stdio.h>
-#include <stdlib.h>
+#include <stdio.h>  // for printf(), fprintf()
+#include <stdlib.h> // for exit()
+#include <string.h> // for strerror()
+#include <errno.h>  // for errno
 
+extern void print_err_file(const char *fsobj);
 /**
  * @brief inform the user of an invalid action and exit
  *
- * @param invalidAction string of the invalid action specified by the user
+ * @param action string of the invalid action specified by the user
  */
-extern void printInvalidAction(const char *invalidAction);
+extern void print_invalid_action(const char *action);
 
 #endif

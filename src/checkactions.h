@@ -7,12 +7,18 @@
 #ifndef CHECKACTIONS
 #define CHECKACTIONS
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <errno.h>
-#include <pwd.h>
+#include <stdio.h>     // for printf()
+#include <stdlib.h>    // for exit()
+#include <unistd.h>    // for stat(), chdir()
+#include <sys/stat.h>  // for struct stat
+#include <pwd.h>       // for getpwent(), setpwent(), endpwent()
+#include <grp.h>       // for getgrent(), setgrent(), endgrent(), getgrouplist()
+#include <sys/types.h> // for gid_t
 
-extern void checkcd(const char *fsobj);
+extern void checkfsobj_dir(const char *fsobj, struct stat *fsobj_info);
+extern void checkcd(struct stat *fsobj_info);
+extern int check_permissions_usr(struct passwd *pw_entry, struct stat *fsobj_info);
+extern int check_permissions_grp(struct passwd *pw_entry, struct stat *fsobj_info);
+extern int check_permissions_other(struct passwd *pw_entry, struct stat *fsobj_info);
 
 #endif
