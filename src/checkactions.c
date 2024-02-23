@@ -28,28 +28,48 @@ void checkfsobj_dir(const char *fsobj, struct stat *fsobj_info)
 void checkcd(struct stat *fsobj_info)
 {
     struct passwd *pw_entry;
+
+    setpwent();
     while ((pw_entry = getpwent()) != NULL)
     {
-        /* TODO: check user, group, and other permissions
-                 if the user has permission from at least one category, they are good
-        */
-        if (check_permissions_usr(pw_entry, fsobj_info) ||
-            check_permissions_grp(pw_entry, fsobj_info) ||
-            check_permissions_other(pw_entry, fsobj_info))
+        // don't forget to check the sticky bit
+        // root can cd into a file no matter no what
+        if (strcmp(pw_entry->pw_name, "root") == 0 ||
+            check_permissions_usr(pw_entry, fsobj_info, 'x') ||
+            check_permissions_grp(pw_entry, fsobj_info, 'x') ||
+            check_permissions_other(pw_entry, fsobj_info, 'x'))
         {
             printf("%s\n", pw_entry->pw_name);
         }
     }
-    setpwent();
     endpwent();
 }
 
-int check_permissions_usr(struct passwd *pw_entry, struct stat *fsobj_info)
+int check_permissions_usr(struct passwd *pw_entry, struct stat *fsobj_info, const char permission)
 {
+    if (fsobj_info->st_uid == pw_entry->pw_uid)
+    {
+        // REM: do any of the actions require multiple permissions? might have to modify these switch statements if so.
+        switch (permission)
+        {
+        case 'r':
+            return fsobj_info->st_mode & S_IRUSR ? 1 : 0;
+            break;
+        case 'w':
+            return fsobj_info->st_mode & S_IWUSR ? 1 : 0;
+            break;
+        case 'x':
+            return fsobj_info->st_mode & S_IXUSR ? 1 : 0;
+            break;
+        default:
+            break;
+        }
+    }
+
     return 0;
 }
 
-int check_permissions_grp(struct passwd *pw_entry, struct stat *fsobj_info)
+int check_permissions_grp(struct passwd *pw_entry, struct stat *fsobj_info, const char permission)
 {
     struct group *grp_entry;
     gid_t *grps;
@@ -62,10 +82,24 @@ int check_permissions_grp(struct passwd *pw_entry, struct stat *fsobj_info)
     for (int i = 0; i < num_grps; i++)
     {
         grp_entry = getgrgid(grps[i]);
+        // current group is group owner of file
         if (fsobj_info->st_gid == grp_entry->gr_gid)
         {
             free(grps);
-            return fsobj_info->st_mode & S_IXGRP ? 1 : 0; // return whether grp_entry has execute permissions
+            switch (permission)
+            {
+            case 'r':
+                return fsobj_info->st_mode & S_IRGRP ? 1 : 0;
+                break;
+            case 'w':
+                return fsobj_info->st_mode & S_IWGRP ? 1 : 0;
+                break;
+            case 'x':
+                return fsobj_info->st_mode & S_IXGRP ? 1 : 0;
+                break;
+            default:
+                break;
+            }
         }
     }
 
@@ -73,7 +107,22 @@ int check_permissions_grp(struct passwd *pw_entry, struct stat *fsobj_info)
     return 0; // no group owner found for user
 }
 
-int check_permissions_other(struct passwd *pw_entry, struct stat *fsobj_info)
+int check_permissions_other(struct passwd *pw_entry, struct stat *fsobj_info, const char permission)
 {
+    switch (permission)
+    {
+    case 'r':
+        return fsobj_info->st_mode & S_IROTH ? 1 : 0;
+        break;
+    case 'w':
+        return fsobj_info->st_mode & S_IWOTH ? 1 : 0;
+        break;
+    case 'x':
+        return fsobj_info->st_mode & S_IXOTH ? 1 : 0;
+        break;
+    default:
+        break;
+    }
+
     return 0;
 }

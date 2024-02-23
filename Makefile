@@ -15,7 +15,7 @@ default: $(BINS)
 src/%.o: src/%.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# Removes *.o files, but leaves executable
+# Remove *.o files, but leave executable
 .PHONY: clean
 clean:
 	rm -f core* src/*.o *~
@@ -24,7 +24,11 @@ clean:
 whocan: src/whocan.o src/checkactions.o src/helpers.o
 	$(CC) $(LDFLAGS) $^ -o $@
 
-# Removes all files that can be reconstructed through "make"
+# Run tests
+test: whocan
+	./whocan cd test
+
+# Remove all files that can be reconstructed through "make"
 .PHONY: immaculate
 immaculate: clean
 	rm -f $(BINS)

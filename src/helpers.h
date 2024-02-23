@@ -12,6 +12,11 @@
 #include <string.h> // for strerror()
 #include <errno.h>  // for errno
 
+/**
+ * @brief print a message to standard error informing about the most recent error that occurred on a file
+ *
+ * @param fsobj file that caused an error to occur
+ */
 extern void print_err_file(const char *fsobj);
 /**
  * @brief inform the user of an invalid action and exit
