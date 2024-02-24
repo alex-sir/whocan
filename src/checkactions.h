@@ -15,6 +15,15 @@
 #include <grp.h>       // for getgrent(), setgrent(), endgrent(), getgrouplist()
 #include <sys/types.h> // for gid_t
 
+// 7 rwx combinations
+#define PBITS_R 4
+#define PBITS_W 2
+#define PBITS_X 1
+#define PBITS_RW 6
+#define PBITS_RX 5
+#define PBITS_WX 3
+#define PBITS_RWX 7
+
 /**
  * @brief check if a filesystem object is a directory; if not, exit the program
  *
@@ -33,30 +42,30 @@ extern void checkcd(struct stat *fsobj_info);
  *
  * @param pw_entry password file entry containing information about a user
  * @param fsobj_info structure containing information about a filesystem object
- * @param permission permission bit to check: read (r), write (w), or execute (x)
+ * @param PBITS permission bits PBITS_[COMBO] to check any combination of read (r), write (w), and execute (x)
  * @return int 1: user has "user" permission for the specified permission |
  *             0: user does not have "user" permission for the specified permission
  */
-extern int check_permissions_usr(struct passwd *pw_entry, struct stat *fsobj_info, const char permission);
+extern int check_permissions_usr(struct passwd *pw_entry, struct stat *fsobj_info, const int PBITS);
 /**
  * @brief check "group" permission bits for a user: read (r), write (w), or execute (x)
  *
  * @param pw_entry password file entry containing information about a user
  * @param fsobj_info structure containing information about a filesystem object
- * @param permission permission bit to check: read (r), write (w), or execute (x)
+ * @param PBITS permission bits PBITS_[COMBO] to check any combination of read (r), write (w), and execute (x)
  * @return int 1: user has "group" permission for the specified permission |
  *             0: user does not have "group" permission for the specified permission
  */
-extern int check_permissions_grp(struct passwd *pw_entry, struct stat *fsobj_info, const char permission);
+extern int check_permissions_grp(struct passwd *pw_entry, struct stat *fsobj_info, const int PBITS);
 /**
  * @brief check "other" permission bits for a user: read (r), write (w), or execute (x)
  *
  * @param pw_entry password file entry containing information about a user
  * @param fsobj_info structure containing information about a filesystem object
- * @param permission permission bit to check: read (r), write (w), or execute (x)
+ * @param PBITS permission bits PBITS_[COMBO] to check any combination of read (r), write (w), and execute (x)
  * @return int 1: user has "other" permission for the specified permission |
  *             0: user does not have "other" permission for the specified permission
  */
-extern int check_permissions_other(struct passwd *pw_entry, struct stat *fsobj_info, const char permission);
+extern int check_permissions_other(struct passwd *pw_entry, struct stat *fsobj_info, const int PBITS);
 
 #endif

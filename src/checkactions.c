@@ -10,6 +10,15 @@
 /* Resources
     The Mode Bits for Access Permission: https://www.gnu.org/software/libc/manual/html_node/Permission-Bits.html
 */
+/* sticky bit
+    within a directory, it restricts the ability to delete and rename files to the file owner, group owner, or root
+    even if "others" have write permissions
+    represented symbolically as "t"
+    represented numerically as "1" e.g. "1777"
+*/
+// TODO: use realpath(3) to obtain the absolute pathname of fsobj
+// TODO: use a global variable (canEveryone) to help determine if everyone can perform the action on fsobj
+// TODO: use qsort(3) to sort names in ASCII order
 
 void checkfsobj_dir(const char *fsobj, struct stat *fsobj_info)
 {
@@ -32,12 +41,11 @@ void checkcd(struct stat *fsobj_info)
     setpwent();
     while ((pw_entry = getpwent()) != NULL)
     {
-        // don't forget to check the sticky bit
-        // root can cd into a file no matter no what
+        // root can cd into a file no matter the permissions
         if (strcmp(pw_entry->pw_name, "root") == 0 ||
-            check_permissions_usr(pw_entry, fsobj_info, 'x') ||
-            check_permissions_grp(pw_entry, fsobj_info, 'x') ||
-            check_permissions_other(pw_entry, fsobj_info, 'x'))
+            check_permissions_usr(pw_entry, fsobj_info, PBITS_X) ||
+            check_permissions_grp(pw_entry, fsobj_info, PBITS_X) ||
+            check_permissions_other(pw_entry, fsobj_info, PBITS_X))
         {
             printf("%s\n", pw_entry->pw_name);
         }
@@ -45,21 +53,32 @@ void checkcd(struct stat *fsobj_info)
     endpwent();
 }
 
-int check_permissions_usr(struct passwd *pw_entry, struct stat *fsobj_info, const char permission)
+int check_permissions_usr(struct passwd *pw_entry, struct stat *fsobj_info, const int PBITS)
 {
     if (fsobj_info->st_uid == pw_entry->pw_uid)
     {
-        // REM: do any of the actions require multiple permissions? might have to modify these switch statements if so.
-        switch (permission)
+        switch (PBITS)
         {
-        case 'r':
+        case PBITS_R:
             return fsobj_info->st_mode & S_IRUSR ? 1 : 0;
             break;
-        case 'w':
+        case PBITS_W:
             return fsobj_info->st_mode & S_IWUSR ? 1 : 0;
             break;
-        case 'x':
+        case PBITS_X:
             return fsobj_info->st_mode & S_IXUSR ? 1 : 0;
+            break;
+        case PBITS_RW:
+            return ((fsobj_info->st_mode & S_IRUSR) && (fsobj_info->st_mode & S_IWUSR)) ? 1 : 0;
+            break;
+        case PBITS_RX:
+            return ((fsobj_info->st_mode & S_IRUSR) && (fsobj_info->st_mode & S_IXUSR)) ? 1 : 0;
+            break;
+        case PBITS_WX:
+            return ((fsobj_info->st_mode & S_IWUSR) && (fsobj_info->st_mode & S_IXUSR)) ? 1 : 0;
+            break;
+        case PBITS_RWX:
+            return ((fsobj_info->st_mode & S_IRUSR) && (fsobj_info->st_mode & S_IWUSR) && (fsobj_info->st_mode & S_IXUSR)) ? 1 : 0;
             break;
         default:
             break;
@@ -69,7 +88,7 @@ int check_permissions_usr(struct passwd *pw_entry, struct stat *fsobj_info, cons
     return 0;
 }
 
-int check_permissions_grp(struct passwd *pw_entry, struct stat *fsobj_info, const char permission)
+int check_permissions_grp(struct passwd *pw_entry, struct stat *fsobj_info, const int PBITS)
 {
     struct group *grp_entry;
     gid_t *grps;
@@ -86,16 +105,28 @@ int check_permissions_grp(struct passwd *pw_entry, struct stat *fsobj_info, cons
         if (fsobj_info->st_gid == grp_entry->gr_gid)
         {
             free(grps);
-            switch (permission)
+            switch (PBITS)
             {
-            case 'r':
+            case PBITS_R:
                 return fsobj_info->st_mode & S_IRGRP ? 1 : 0;
                 break;
-            case 'w':
+            case PBITS_W:
                 return fsobj_info->st_mode & S_IWGRP ? 1 : 0;
                 break;
-            case 'x':
+            case PBITS_X:
                 return fsobj_info->st_mode & S_IXGRP ? 1 : 0;
+                break;
+            case PBITS_RW:
+                return ((fsobj_info->st_mode & S_IRGRP) && (fsobj_info->st_mode & S_IWGRP)) ? 1 : 0;
+                break;
+            case PBITS_RX:
+                return ((fsobj_info->st_mode & S_IRGRP) && (fsobj_info->st_mode & S_IXGRP)) ? 1 : 0;
+                break;
+            case PBITS_WX:
+                return ((fsobj_info->st_mode & S_IWGRP) && (fsobj_info->st_mode & S_IXGRP)) ? 1 : 0;
+                break;
+            case PBITS_RWX:
+                return ((fsobj_info->st_mode & S_IRGRP) && (fsobj_info->st_mode & S_IWGRP) && (fsobj_info->st_mode & S_IXGRP)) ? 1 : 0;
                 break;
             default:
                 break;
@@ -107,18 +138,30 @@ int check_permissions_grp(struct passwd *pw_entry, struct stat *fsobj_info, cons
     return 0; // no group owner found for user
 }
 
-int check_permissions_other(struct passwd *pw_entry, struct stat *fsobj_info, const char permission)
+int check_permissions_other(struct passwd *pw_entry, struct stat *fsobj_info, const int PBITS)
 {
-    switch (permission)
+    switch (PBITS)
     {
-    case 'r':
+    case PBITS_R:
         return fsobj_info->st_mode & S_IROTH ? 1 : 0;
         break;
-    case 'w':
+    case PBITS_W:
         return fsobj_info->st_mode & S_IWOTH ? 1 : 0;
         break;
-    case 'x':
+    case PBITS_X:
         return fsobj_info->st_mode & S_IXOTH ? 1 : 0;
+        break;
+    case PBITS_RW:
+        return ((fsobj_info->st_mode & S_IROTH) && (fsobj_info->st_mode & S_IWOTH)) ? 1 : 0;
+        break;
+    case PBITS_RX:
+        return ((fsobj_info->st_mode & S_IROTH) && (fsobj_info->st_mode & S_IXOTH)) ? 1 : 0;
+        break;
+    case PBITS_WX:
+        return ((fsobj_info->st_mode & S_IWOTH) && (fsobj_info->st_mode & S_IXOTH)) ? 1 : 0;
+        break;
+    case PBITS_RWX:
+        return ((fsobj_info->st_mode & S_IROTH) && (fsobj_info->st_mode & S_IWOTH) && (fsobj_info->st_mode & S_IXOTH)) ? 1 : 0;
         break;
     default:
         break;
