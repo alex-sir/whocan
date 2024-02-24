@@ -28,6 +28,10 @@ whocan: src/whocan.o src/checkactions.o src/helpers.o
 test: whocan
 	./whocan cd test
 
+# Check for memory leaks
+mem: whocan
+	valgrind --leak-check=full --show-leak-kinds=all ./whocan cd test
+
 # Remove all files that can be reconstructed through "make"
 .PHONY: immaculate
 immaculate: clean

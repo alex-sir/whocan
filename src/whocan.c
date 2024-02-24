@@ -8,24 +8,55 @@
 #include "helpers.h"
 
 #include <stdio.h>    // for printf()
+#include <stdlib.h>   // for malloc()
 #include <string.h>   // for strcmp()
 #include <sys/stat.h> // for struct stat
+#include <unistd.h>   // for sysconf()
+#include <limits.h>   // for UID_MAX
+
+#define UID_MAX_SIZE sysconf(_SC_LOGIN_NAME_MAX)
 
 int main(int argc, char const *argv[])
 {
-    // invalid arguments
+    if (UID_MAX_SIZE == -1)
+    {
+        print_err_exit();
+    }
+
+    // invalid number of arguments
     if (argc != 3)
     {
         printf("Usage: ./whocan [ACTION] [FSOBJ]\n");
-        return 0;
+        exit(EXIT_FAILURE);
     }
 
     const char *action = argv[1], *fsobj = argv[2];
     struct stat fsobj_info;
+    int valid_users_count = 0, canEveryone = 0;
+    char **valid_users = (char **)malloc(INIT_NUM_USERS * sizeof(char *));
+    if (valid_users == NULL)
+    {
+        print_err_exit();
+    }
+    // allocate memory for the initial number of users that can be stored
+    for (size_t i = 0; i < INIT_NUM_USERS; i++)
+    {
+        valid_users[i] = (char *)malloc(UID_MAX_SIZE * sizeof(char));
+        if (valid_users[i] == NULL)
+        {
+            free_valid_users(&valid_users, i + 1); // free all previously allocated strings
+            print_err_exit();
+        }
+    }
+
     if (strcmp(action, "cd") == 0) // directory
     {
-        checkfsobj_dir(fsobj, &fsobj_info);
-        checkcd(&fsobj_info);
+        if (checkfsobj_dir(fsobj, &fsobj_info) == -1)
+        {
+            free_valid_users(&valid_users, INIT_NUM_USERS);
+            exit(EXIT_FAILURE);
+        }
+        valid_users_count = checkcd(&fsobj_info, &valid_users, &canEveryone);
     }
     else if (strcmp(action, "delete") == 0) // all
     {
@@ -53,8 +84,20 @@ int main(int argc, char const *argv[])
     }
     else
     {
+        free_valid_users(&valid_users, INIT_NUM_USERS);
         print_invalid_action(action);
     }
 
+    // TODO: sort valid_users, then print valid_users
+    if (canEveryone)
+    {
+        printf("(everyone)\n");
+    }
+    else
+    {
+        print_valid_users(&valid_users, valid_users_count);
+    }
+
+    free_valid_users(&valid_users, INIT_NUM_USERS);
     return 0;
 }

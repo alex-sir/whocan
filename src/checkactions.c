@@ -17,40 +17,51 @@
     represented numerically as "1" e.g. "1777"
 */
 // TODO: use realpath(3) to obtain the absolute pathname of fsobj
-// TODO: use a global variable (canEveryone) to help determine if everyone can perform the action on fsobj
 // TODO: use qsort(3) to sort names in ASCII order
 
-void checkfsobj_dir(const char *fsobj, struct stat *fsobj_info)
+int checkfsobj_dir(const char *fsobj, struct stat *fsobj_info)
 {
     if (stat(fsobj, fsobj_info) == -1)
     {
         print_err_file(fsobj);
-        exit(EXIT_FAILURE);
+        return -1;
     }
     if (!S_ISDIR(fsobj_info->st_mode))
     {
         fprintf(stderr, "%s: Not a directory\n", fsobj);
-        exit(EXIT_FAILURE);
+        return -1;
     }
+
+    return 1; // fsobj is a valid directory
 }
 
-void checkcd(struct stat *fsobj_info)
+int checkcd(struct stat *fsobj_info, char ***valid_users, int *canEveryone)
 {
     struct passwd *pw_entry;
+    int total_users_count = 0, valid_users_count = 0;
 
     setpwent();
     while ((pw_entry = getpwent()) != NULL)
     {
-        // root can cd into a file no matter the permissions
+
         if (strcmp(pw_entry->pw_name, "root") == 0 ||
             check_permissions_usr(pw_entry, fsobj_info, PBITS_X) ||
-            check_permissions_grp(pw_entry, fsobj_info, PBITS_X) ||
+            check_permissions_grp(pw_entry, fsobj_info, PBITS_X, valid_users, valid_users_count) ||
             check_permissions_other(pw_entry, fsobj_info, PBITS_X))
         {
-            printf("%s\n", pw_entry->pw_name);
+            strcpy((*valid_users)[valid_users_count], pw_entry->pw_name);
+            valid_users_count++;
         }
+        total_users_count++;
     }
     endpwent();
+
+    if (valid_users_count == total_users_count)
+    {
+        *canEveryone = 1;
+    }
+
+    return valid_users_count;
 }
 
 int check_permissions_usr(struct passwd *pw_entry, struct stat *fsobj_info, const int PBITS)
@@ -88,7 +99,7 @@ int check_permissions_usr(struct passwd *pw_entry, struct stat *fsobj_info, cons
     return 0;
 }
 
-int check_permissions_grp(struct passwd *pw_entry, struct stat *fsobj_info, const int PBITS)
+int check_permissions_grp(struct passwd *pw_entry, struct stat *fsobj_info, const int PBITS, char ***valid_users, int valid_users_count)
 {
     struct group *grp_entry;
     gid_t *grps;
@@ -96,9 +107,14 @@ int check_permissions_grp(struct passwd *pw_entry, struct stat *fsobj_info, cons
 
     getgrouplist(pw_entry->pw_name, pw_entry->pw_gid, NULL, &num_grps); // get number of groups
     grps = malloc(sizeof(*grps) * num_grps);
+    if (grps == NULL)
+    {
+        free_valid_users(valid_users, valid_users_count);
+        print_err_exit();
+    }
     getgrouplist(pw_entry->pw_name, pw_entry->pw_gid, grps, &num_grps); // get groups
 
-    for (int i = 0; i < num_grps; i++)
+    for (size_t i = 0; i < num_grps; i++)
     {
         grp_entry = getgrgid(grps[i]);
         // current group is group owner of file
