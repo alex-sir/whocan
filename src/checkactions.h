@@ -8,8 +8,8 @@
 #define CHECKACTIONS
 
 #include <stdio.h>     // for printf()
-#include <stdlib.h>    // for exit()
-#include <unistd.h>    // for stat(), chdir(), access()
+#include <stdlib.h>    // for exit(), qsort()
+#include <unistd.h>    // for stat()
 #include <sys/stat.h>  // for struct stat
 #include <pwd.h>       // for getpwent(), setpwent(), endpwent()
 #include <grp.h>       // for getgrent(), setgrent(), endgrent(), getgrouplist()

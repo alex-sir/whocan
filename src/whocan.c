@@ -14,9 +14,10 @@
 #include <unistd.h>   // for sysconf()
 #include <limits.h>   // for UID_MAX
 
-#define UID_MAX_SIZE sysconf(_SC_LOGIN_NAME_MAX)
+#define UID_MAX_SIZE sysconf(_SC_LOGIN_NAME_MAX)     // max size of a username
+#define PATHNAME_MAX pathconf(".", _PC_PATH_MAX) + 1 // max size of a file pathname
 
-int main(int argc, char const *argv[])
+int main(int argc, char *argv[])
 {
     if (UID_MAX_SIZE == -1)
     {
@@ -30,7 +31,12 @@ int main(int argc, char const *argv[])
         exit(EXIT_FAILURE);
     }
 
-    const char *action = argv[1], *fsobj = argv[2];
+    char *action = argv[1];
+    char fsobj[PATHNAME_MAX];
+    if (realpath(argv[2], fsobj) == NULL)
+    {
+        print_err_exit();
+    }
     struct stat fsobj_info;
     int valid_users_count = 0, canEveryone = 0;
     char **valid_users = (char **)malloc(INIT_NUM_USERS * sizeof(char *));
@@ -88,13 +94,13 @@ int main(int argc, char const *argv[])
         print_invalid_action(action);
     }
 
-    // TODO: sort valid_users, then print valid_users
     if (canEveryone)
     {
         printf("(everyone)\n");
     }
     else
     {
+        qsort(valid_users, valid_users_count, sizeof(char *), compare_users);
         print_valid_users(&valid_users, valid_users_count);
     }
 

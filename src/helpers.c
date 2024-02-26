@@ -56,3 +56,8 @@ void free_valid_users(char ***valid_users, int valid_users_count)
     }
     free((*valid_users));
 }
+
+int compare_users(const void *user1, const void *user2)
+{
+    return strcmp(*(const char **)user1, *(const char **)user2);
+}

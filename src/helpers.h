@@ -9,7 +9,7 @@
 
 #include <stdio.h>  // for printf(), fprintf()
 #include <stdlib.h> // for exit(), free()
-#include <string.h> // for strerror()
+#include <string.h> // for strerror(), strcmp()
 #include <errno.h>  // for errno
 
 /**
@@ -42,5 +42,13 @@ extern void print_valid_users(char ***valid_users, int valid_users_count);
  * @param valid_users_count number of valid users located in valid_users
  */
 extern void free_valid_users(char ***valid_users, int valid_users_count);
+/**
+ * @brief comparison function used for sorting usernames with qsort()
+ *
+ * @param user1 user string compared to user2
+ * @param user2 user string compared to user1
+ * @return int result of strcmp between user1 and user2
+ */
+extern int compare_users(const void *user1, const void *user2);
 
 #endif

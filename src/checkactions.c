@@ -16,8 +16,6 @@
     represented symbolically as "t"
     represented numerically as "1" e.g. "1777"
 */
-// TODO: use realpath(3) to obtain the absolute pathname of fsobj
-// TODO: use qsort(3) to sort names in ASCII order
 
 int checkfsobj_dir(const char *fsobj, struct stat *fsobj_info)
 {
@@ -106,7 +104,7 @@ int check_permissions_grp(struct passwd *pw_entry, struct stat *fsobj_info, cons
     int num_grps = 0;
 
     getgrouplist(pw_entry->pw_name, pw_entry->pw_gid, NULL, &num_grps); // get number of groups
-    grps = malloc(sizeof(*grps) * num_grps);
+    grps = (gid_t *)malloc(sizeof(*grps) * num_grps);
     if (grps == NULL)
     {
         free_valid_users(valid_users, valid_users_count);
