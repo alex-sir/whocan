@@ -55,18 +55,37 @@ int main(int argc, char *argv[])
         }
     }
 
-    if (strcmp(action, "cd") == 0) // directory
+    // actions can be performed on a directory, file, or device
+    if (strcmp(action, "cd") == 0 || strcmp(action, "search") == 0) // directory
     {
-        if (checkfsobj_dir(fsobj, &fsobj_info) == -1)
+        if (checkfsobj(fsobj, &fsobj_info) == -1 || checkfsobj_dir(fsobj, &fsobj_info) == -1)
         {
+            fprintf(stderr, "%s: Not a directory\n", fsobj);
             free_valid_users(&valid_users, INIT_NUM_USERS);
             exit(EXIT_FAILURE);
         }
-        valid_users_count = checkcd(&fsobj_info, &valid_users, &canEveryone);
+        valid_users_count = check_cd(&fsobj_info, &valid_users, &canEveryone);
     }
     else if (strcmp(action, "delete") == 0) // all
     {
-        printf("delete\n");
+        if (checkfsobj(fsobj, &fsobj_info) == -1 ||
+            (checkfsobj_dir(fsobj, &fsobj_info) == -1 &&
+             checkfsobj_file(fsobj, &fsobj_info) == -1 &&
+             checkfsobj_device(fsobj, &fsobj_info) == -1))
+        {
+            fprintf(stderr, "%s: Not a directory, file, or device\n", fsobj);
+            free_valid_users(&valid_users, INIT_NUM_USERS);
+            exit(EXIT_FAILURE);
+        }
+
+        char *parentdir = dirname(fsobj);
+        struct stat parentdir_info;
+        if (stat(parentdir, &parentdir_info) == -1)
+        {
+            free_valid_users(&valid_users, INIT_NUM_USERS);
+            print_err_file(fsobj);
+        }
+        valid_users_count = check_delete(&fsobj_info, &parentdir_info, &valid_users, &canEveryone);
     }
     else if (strcmp(action, "execute") == 0) // file
     {
@@ -79,10 +98,6 @@ int main(int argc, char *argv[])
     else if (strcmp(action, "read") == 0) // all
     {
         printf("read\n");
-    }
-    else if (strcmp(action, "search") == 0) // directory
-    {
-        printf("search\n");
     }
     else if (strcmp(action, "write") == 0) // directory OR file, device
     {

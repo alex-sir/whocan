@@ -17,49 +17,45 @@
     represented numerically as "1" e.g. "1777"
 */
 
-int checkfsobj_dir(const char *fsobj, struct stat *fsobj_info)
+int checkfsobj(const char *fsobj, struct stat *fsobj_info)
 {
     if (stat(fsobj, fsobj_info) == -1)
     {
         print_err_file(fsobj);
         return -1;
     }
+
+    return 1; // fsobj is a valid filesystem object
+}
+
+int checkfsobj_dir(const char *fsobj, struct stat *fsobj_info)
+{
     if (!S_ISDIR(fsobj_info->st_mode))
     {
-        fprintf(stderr, "%s: Not a directory\n", fsobj);
         return -1;
     }
 
     return 1; // fsobj is a valid directory
 }
 
-int checkcd(struct stat *fsobj_info, char ***valid_users, int *canEveryone)
+int checkfsobj_file(const char *fsobj, struct stat *fsobj_info)
 {
-    struct passwd *pw_entry;
-    int total_users_count = 0, valid_users_count = 0;
-
-    setpwent();
-    while ((pw_entry = getpwent()) != NULL)
+    if (!S_ISREG(fsobj_info->st_mode))
     {
-
-        if (strcmp(pw_entry->pw_name, "root") == 0 ||
-            check_permissions_usr(pw_entry, fsobj_info, PBITS_X) ||
-            check_permissions_grp(pw_entry, fsobj_info, PBITS_X, valid_users, valid_users_count) ||
-            check_permissions_other(pw_entry, fsobj_info, PBITS_X))
-        {
-            strcpy((*valid_users)[valid_users_count], pw_entry->pw_name);
-            valid_users_count++;
-        }
-        total_users_count++;
-    }
-    endpwent();
-
-    if (valid_users_count == total_users_count)
-    {
-        *canEveryone = 1;
+        return -1;
     }
 
-    return valid_users_count;
+    return 1; // fsobj is a valid file
+}
+
+int checkfsobj_device(const char *fsobj, struct stat *fsobj_info)
+{
+    if (!S_ISBLK(fsobj_info->st_mode) || !S_ISCHR(fsobj_info->st_mode))
+    {
+        return -1;
+    }
+
+    return 1; // fsobj is a valid device
 }
 
 int check_permissions_usr(struct passwd *pw_entry, struct stat *fsobj_info, const int PBITS)
@@ -182,4 +178,76 @@ int check_permissions_other(struct passwd *pw_entry, struct stat *fsobj_info, co
     }
 
     return 0;
+}
+
+int check_cd(struct stat *fsobj_info, char ***valid_users, int *canEveryone)
+{
+    struct passwd *pw_entry;
+    int total_users_count = 0, valid_users_count = 0;
+
+    setpwent();
+    while ((pw_entry = getpwent()) != NULL)
+    {
+        // has execute bit OR is root
+        if (strcmp(pw_entry->pw_name, "root") == 0 ||
+            check_permissions_usr(pw_entry, fsobj_info, PBITS_X) ||
+            check_permissions_grp(pw_entry, fsobj_info, PBITS_X, valid_users, valid_users_count) ||
+            check_permissions_other(pw_entry, fsobj_info, PBITS_X))
+        {
+            strcpy((*valid_users)[valid_users_count], pw_entry->pw_name);
+            valid_users_count++;
+        }
+        total_users_count++;
+    }
+    endpwent();
+
+    if (valid_users_count == total_users_count)
+    {
+        *canEveryone = 1;
+    }
+
+    return valid_users_count;
+}
+
+int check_delete(struct stat *fsobj_info, struct stat *parentdir_info, char ***valid_users, int *canEveryone)
+{
+    struct passwd *pw_entry;
+    int total_users_count = 0, valid_users_count = 0;
+    int is_sticky = fsobj_info->st_mode & __S_ISVTX ? 1 : 0; // sticky bit only relevant for directories
+    int is_root = 0, has_wx_perms_parent = 0, is_owner_file = 0, is_owner_parent = 0, has_wx_perms = 0;
+
+    setpwent();
+    while ((pw_entry = getpwent()) != NULL)
+    {
+        /*
+            STICKY: has write AND execute bit on parent directory AND (owns the files OR owns the parent directory)
+            NON-STICKY: has write AND execute bit
+            EITHER: is root
+        */
+        is_root = strcmp(pw_entry->pw_name, "root") == 0;
+        has_wx_perms_parent = check_permissions_usr(pw_entry, parentdir_info, PBITS_WX) ||
+                              check_permissions_grp(pw_entry, parentdir_info, PBITS_WX, valid_users, valid_users_count) ||
+                              check_permissions_other(pw_entry, parentdir_info, PBITS_WX);
+        is_owner_file = pw_entry->pw_uid == fsobj_info->st_uid;
+        is_owner_parent = pw_entry->pw_uid == parentdir_info->st_uid;
+        has_wx_perms = check_permissions_usr(pw_entry, fsobj_info, PBITS_WX) ||
+                       check_permissions_grp(pw_entry, fsobj_info, PBITS_WX, valid_users, valid_users_count) ||
+                       check_permissions_other(pw_entry, fsobj_info, PBITS_WX);
+        if (is_root ||
+            (is_sticky && has_wx_perms_parent && (is_owner_file || is_owner_parent)) ||
+            (!is_sticky && has_wx_perms))
+        {
+            strcpy((*valid_users)[valid_users_count], pw_entry->pw_name);
+            valid_users_count++;
+        }
+        total_users_count++;
+    }
+    endpwent();
+
+    if (valid_users_count == total_users_count)
+    {
+        *canEveryone = 1;
+    }
+
+    return valid_users_count;
 }
