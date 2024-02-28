@@ -16,8 +16,6 @@
 
 #define PATHNAME_MAX pathconf(".", _PC_PATH_MAX) + 1 // max size of a file pathname
 
-// TODO: make sure symbolic links are followed and work
-
 int main(int argc, char *argv[])
 {
     // can't get max sizes
