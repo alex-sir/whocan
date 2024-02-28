@@ -40,14 +40,6 @@ void print_invalid_action(const char *action)
     exit(EXIT_FAILURE);
 }
 
-void print_valid_users(char ***valid_users, int valid_users_count)
-{
-    for (size_t i = 0; i < valid_users_count; i++)
-    {
-        printf("%s\n", (*valid_users)[i]);
-    }
-}
-
 void free_valid_users(char ***valid_users, int valid_users_count)
 {
     for (size_t i = 0; i < valid_users_count; i++)
@@ -55,6 +47,24 @@ void free_valid_users(char ***valid_users, int valid_users_count)
         free((*valid_users)[i]);
     }
     free((*valid_users));
+}
+
+void realloc_valid_users(char ***valid_users, int valid_users_count)
+{
+    *valid_users = (char **)realloc(*valid_users, (valid_users_count + INIT_NUM_USERS) * sizeof(char *));
+    if (*valid_users == NULL)
+    {
+        free_valid_users(valid_users, valid_users_count);
+        print_err_exit();
+    }
+}
+
+void print_valid_users(char ***valid_users, int valid_users_count)
+{
+    for (size_t i = 0; i < valid_users_count; i++)
+    {
+        printf("%s\n", (*valid_users)[i]);
+    }
 }
 
 int compare_users(const void *user1, const void *user2)

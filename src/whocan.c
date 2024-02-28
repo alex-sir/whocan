@@ -14,12 +14,11 @@
 #include <unistd.h>   // for sysconf()
 #include <limits.h>   // for UID_MAX
 
-#define UID_MAX_SIZE sysconf(_SC_LOGIN_NAME_MAX)     // max size of a username
 #define PATHNAME_MAX pathconf(".", _PC_PATH_MAX) + 1 // max size of a file pathname
 
 int main(int argc, char *argv[])
 {
-    if (UID_MAX_SIZE == -1)
+    if (NAME_MAX == -1)
     {
         print_err_exit();
     }
@@ -38,21 +37,11 @@ int main(int argc, char *argv[])
         print_err_exit();
     }
     struct stat fsobj_info;
-    int valid_users_count = 0, canEveryone = 0;
+    int valid_users_count = 0, can_everyone = 0;
     char **valid_users = (char **)malloc(INIT_NUM_USERS * sizeof(char *));
     if (valid_users == NULL)
     {
         print_err_exit();
-    }
-    // allocate memory for the initial number of users that can be stored
-    for (size_t i = 0; i < INIT_NUM_USERS; i++)
-    {
-        valid_users[i] = (char *)malloc(UID_MAX_SIZE * sizeof(char));
-        if (valid_users[i] == NULL)
-        {
-            free_valid_users(&valid_users, i + 1); // free all previously allocated strings
-            print_err_exit();
-        }
     }
 
     // actions can be performed on a directory, file, or device
@@ -64,7 +53,7 @@ int main(int argc, char *argv[])
             free_valid_users(&valid_users, INIT_NUM_USERS);
             exit(EXIT_FAILURE);
         }
-        valid_users_count = check_cd(&fsobj_info, &valid_users, &canEveryone);
+        valid_users_count = check_cd(&fsobj_info, &valid_users, &can_everyone);
     }
     else if (strcmp(action, "delete") == 0) // all
     {
@@ -85,7 +74,7 @@ int main(int argc, char *argv[])
             free_valid_users(&valid_users, INIT_NUM_USERS);
             print_err_file(fsobj);
         }
-        valid_users_count = check_delete(&fsobj_info, &parentdir_info, &valid_users, &canEveryone);
+        valid_users_count = check_delete(&fsobj_info, &parentdir_info, &valid_users, &can_everyone);
     }
     else if (strcmp(action, "execute") == 0) // file
     {
@@ -109,7 +98,7 @@ int main(int argc, char *argv[])
         print_invalid_action(action);
     }
 
-    if (canEveryone)
+    if (can_everyone)
     {
         printf("(everyone)\n");
     }
@@ -119,6 +108,14 @@ int main(int argc, char *argv[])
         print_valid_users(&valid_users, valid_users_count);
     }
 
-    free_valid_users(&valid_users, INIT_NUM_USERS);
+    if (valid_users_count % INIT_NUM_USERS == 0)
+    {
+        free_valid_users(&valid_users, INIT_NUM_USERS * (valid_users_count / INIT_NUM_USERS));
+    }
+    else
+    {
+        free_valid_users(&valid_users, INIT_NUM_USERS * (valid_users_count / INIT_NUM_USERS) + INIT_NUM_USERS);
+    }
+
     return 0;
 }

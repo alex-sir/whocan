@@ -17,6 +17,7 @@
 #include <libgen.h>    // for dirname()
 
 #define INIT_NUM_USERS 50
+#define NAME_MAX sysconf(_SC_LOGIN_NAME_MAX) // max size of a username
 // 7 rwx combinations
 #define PBITS_R 4
 #define PBITS_W 2
@@ -95,23 +96,30 @@ extern int check_permissions_grp(struct passwd *pw_entry, struct stat *fsobj_inf
  */
 extern int check_permissions_other(struct passwd *pw_entry, struct stat *fsobj_info, const int PBITS);
 /**
+ * @brief add a valid user to valid_users
+ *
+ * @param valid_users array of strings containing usernames of valid users which a new valid user will be added to
+ * @param valid_users_count number of valid users located in valid_users
+ */
+extern void add_valid_users_entry(char ***valid_users, int valid_users_count);
+/**
  * @brief check which users have permissions to "cd" into a directory
  *
  * @param fsobj_info structure containing information about a directory
  * @param valid_users array of strings that will be filled with the usernames of users who can "cd"
- * @param canEveryone will indicate if ALL users can "cd"
+ * @param can_everyone will indicate if ALL users can "cd"
  * @return int number of users that can "cd"
  */
-extern int check_cd(struct stat *fsobj_info, char ***valid_users, int *canEveryone);
+extern int check_cd(struct stat *fsobj_info, char ***valid_users, int *can_everyone);
 /**
  * @brief check which users have permissions to "delete" a directory, file, or device
  *
  * @param fsobj_info structure containing information about a directory
  * @param parentdir_info structure containing information about the parent directory of fsobj
  * @param valid_users array of strings that will be filled with the usernames of users who can "delete"
- * @param canEveryone will indicate if ALL users can "delete"
+ * @param can_everyone will indicate if ALL users can "delete"
  * @return int number of users that can "delete"
  */
-extern int check_delete(struct stat *fsobj_info, struct stat *parentdir_info, char ***valid_users, int *canEveryone);
+extern int check_delete(struct stat *fsobj_info, struct stat *parentdir_info, char ***valid_users, int *can_everyone);
 
 #endif

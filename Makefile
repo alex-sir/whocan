@@ -30,7 +30,7 @@ test: whocan
 
 # Check for memory leaks
 mem: whocan
-	valgrind --leak-check=full --show-leak-kinds=all ./whocan cd test
+	valgrind --leak-check=full --show-leak-kinds=all ./whocan cd src
 
 # Remove all files that can be reconstructed through "make"
 .PHONY: immaculate
