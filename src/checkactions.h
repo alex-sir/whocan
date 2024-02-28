@@ -62,7 +62,7 @@ extern int checkfsobj_file(const char *fsobj, struct stat *fsobj_info);
  * @return int 1: fsobj is a valid block or character device |
  *            -1: fsobj is not a valid block or character device
  */
-extern int checkfsobj_device(const char *fsobj, struct stat *fsobj_info);
+extern int checkfsobj_dev(const char *fsobj, struct stat *fsobj_info);
 /**
  * @brief check "user" permission bits for a user: read (r), write (w), or execute (x)
  *
@@ -96,13 +96,6 @@ extern int check_permissions_grp(struct passwd *pw_entry, struct stat *fsobj_inf
  */
 extern int check_permissions_other(struct passwd *pw_entry, struct stat *fsobj_info, const int PBITS);
 /**
- * @brief add a valid user to valid_users
- *
- * @param valid_users array of strings containing usernames of valid users which a new valid user will be added to
- * @param valid_users_count number of valid users located in valid_users
- */
-extern void add_valid_users_entry(char ***valid_users, int valid_users_count);
-/**
  * @brief check which users have permissions to "cd" into a directory
  *
  * @param fsobj_info structure containing information about a directory
@@ -110,11 +103,11 @@ extern void add_valid_users_entry(char ***valid_users, int valid_users_count);
  * @param can_everyone will indicate if ALL users can "cd"
  * @return int number of users that can "cd"
  */
-extern int check_cd(struct stat *fsobj_info, char ***valid_users, int *can_everyone);
+extern int check_cd_search(struct stat *fsobj_info, char ***valid_users, int *can_everyone);
 /**
  * @brief check which users have permissions to "delete" a directory, file, or device
  *
- * @param fsobj_info structure containing information about a directory
+ * @param fsobj_info structure containing information about a directory, file, or device
  * @param parentdir_info structure containing information about the parent directory of fsobj
  * @param valid_users array of strings that will be filled with the usernames of users who can "delete"
  * @param can_everyone will indicate if ALL users can "delete"
@@ -130,5 +123,23 @@ extern int check_delete(struct stat *fsobj_info, struct stat *parentdir_info, ch
  * @return int number of users that can "execute"
  */
 extern int check_execute(struct stat *fsobj_info, char ***valid_users, int *can_everyone);
+/**
+ * @brief check which users have permissions to "ls" a directory
+ *
+ * @param fsobj_info structure containing information about a directory
+ * @param valid_users array of strings that will be filled with the usernames of users who can "ls"
+ * @param can_everyone will indicate if ALL users can "ls"
+ * @return int number of users that can "ls"
+ */
+extern int check_ls_read_dir(struct stat *fsobj_info, char ***valid_users, int *can_everyone);
+/**
+ * @brief check which users have permissions to "ls" a file or device
+ *
+ * @param parentdir_info structure containing information about the parent directory of a filesystem object
+ * @param valid_users array of strings that will be filled with the usernames of users who can "ls"
+ * @param can_everyone will indicate if ALL users can "ls"
+ * @return int number of users that can "ls"
+ */
+extern int check_ls_read_file_dev(struct stat *parentdir_info, char ***valid_users, int *can_everyone);
 
 #endif

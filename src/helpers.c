@@ -7,9 +7,6 @@
 #include "helpers.h"
 #include "checkactions.h"
 
-/**
- * @brief print an error message and exit the program
- */
 void print_err_exit(void)
 {
     fprintf(stderr, "%s\n", strerror(errno));
@@ -40,13 +37,21 @@ void print_invalid_action(const char *action)
     exit(EXIT_FAILURE);
 }
 
-void free_valid_users(char ***valid_users, int valid_users_count)
+void add_valid_users_entry(char ***valid_users, int valid_users_count)
 {
-    for (size_t i = 0; i < valid_users_count; i++)
+    // valid_users full, allocate more memory
+    if (valid_users_count != 0 && valid_users_count % INIT_NUM_USERS == 0)
     {
-        free((*valid_users)[i]);
+        realloc_valid_users(valid_users, valid_users_count);
     }
-    free((*valid_users));
+
+    // allocate memory for the valid user username string
+    (*valid_users)[valid_users_count] = (char *)malloc(NAME_MAX);
+    if ((*valid_users)[valid_users_count] == NULL)
+    {
+        free_valid_users(valid_users, valid_users_count);
+        print_err_exit();
+    }
 }
 
 void realloc_valid_users(char ***valid_users, int valid_users_count)
@@ -58,6 +63,16 @@ void realloc_valid_users(char ***valid_users, int valid_users_count)
         print_err_exit();
     }
 }
+
+void free_valid_users(char ***valid_users, int valid_users_count)
+{
+    for (size_t i = 0; i < valid_users_count; i++)
+    {
+        free((*valid_users)[i]);
+    }
+    free((*valid_users));
+}
+
 
 void print_valid_users(char ***valid_users, int valid_users_count)
 {

@@ -10,10 +10,13 @@
 /* Resources
     The Mode Bits for Access Permission: https://www.gnu.org/software/libc/manual/html_node/Permission-Bits.html
 */
+
 /* sticky bit
-    within a directory, it restricts the ability to delete and rename files to the file owner, group owner, or root
-    even if "others" have write permissions
-    represented symbolically as "t"
+    within a directory, it restricts the ability to delete and rename files to the file owner and root
+    normally it is only relevant for directories
+    represented symbolically as "t" or "T":
+        t: no execute permission for others + sticky bit
+        T: execute permissions for others + sticky bit
     represented numerically as "1" e.g. "1777"
 */
 
@@ -48,7 +51,7 @@ int checkfsobj_file(const char *fsobj, struct stat *fsobj_info)
     return 1; // fsobj is a valid file
 }
 
-int checkfsobj_device(const char *fsobj, struct stat *fsobj_info)
+int checkfsobj_dev(const char *fsobj, struct stat *fsobj_info)
 {
     if (!S_ISBLK(fsobj_info->st_mode) || !S_ISCHR(fsobj_info->st_mode))
     {
@@ -60,7 +63,7 @@ int checkfsobj_device(const char *fsobj, struct stat *fsobj_info)
 
 int check_permissions_usr(struct passwd *pw_entry, struct stat *fsobj_info, const int PBITS)
 {
-    if (fsobj_info->st_uid == pw_entry->pw_uid)
+    if (fsobj_info->st_uid == pw_entry->pw_uid) // current user is "user" owner of the file
     {
         switch (PBITS)
         {
@@ -111,8 +114,7 @@ int check_permissions_grp(struct passwd *pw_entry, struct stat *fsobj_info, cons
     for (size_t i = 0; i < num_grps; i++)
     {
         grp_entry = getgrgid(grps[i]);
-        // current group is group owner of file
-        if (fsobj_info->st_gid == grp_entry->gr_gid)
+        if (fsobj_info->st_gid == grp_entry->gr_gid) // current group is "group" owner of the file
         {
             free(grps);
             switch (PBITS)
@@ -150,6 +152,7 @@ int check_permissions_grp(struct passwd *pw_entry, struct stat *fsobj_info, cons
 
 int check_permissions_other(struct passwd *pw_entry, struct stat *fsobj_info, const int PBITS)
 {
+    // "other" includes anyone that doesn't fall into the categories of "user" or "group"
     switch (PBITS)
     {
     case PBITS_R:
@@ -180,30 +183,14 @@ int check_permissions_other(struct passwd *pw_entry, struct stat *fsobj_info, co
     return 0;
 }
 
-void add_valid_users_entry(char ***valid_users, int valid_users_count)
-{
-    // valid_users full, allocate more memory
-    if (valid_users_count != 0 && valid_users_count % INIT_NUM_USERS == 0)
-    {
-        realloc_valid_users(valid_users, valid_users_count);
-    }
-
-    (*valid_users)[valid_users_count] = (char *)malloc(NAME_MAX);
-    if ((*valid_users)[valid_users_count] == NULL)
-    {
-        free_valid_users(valid_users, valid_users_count);
-        print_err_exit();
-    }
-}
-
-int check_cd(struct stat *fsobj_info, char ***valid_users, int *can_everyone)
+int check_cd_search(struct stat *fsobj_info, char ***valid_users, int *can_everyone)
 {
     struct passwd *pw_entry;
     int total_users_count = 0, valid_users_count = 0;
     int has_x_perms = 0, is_root = 0;
 
     setpwent();
-    while ((pw_entry = getpwent()) != NULL)
+    while ((pw_entry = getpwent()) != NULL) // get every single user from the "passwd" file
     {
         // has execute bit OR is root
         has_x_perms = check_permissions_usr(pw_entry, fsobj_info, PBITS_X) ||
@@ -211,7 +198,7 @@ int check_cd(struct stat *fsobj_info, char ***valid_users, int *can_everyone)
                       check_permissions_other(pw_entry, fsobj_info, PBITS_X);
         is_root = strcmp(pw_entry->pw_name, "root") == 0;
 
-        if (has_x_perms || is_root)
+        if (has_x_perms || is_root) // check that it's a valid user
         {
             add_valid_users_entry(valid_users, valid_users_count);
             strcpy((*valid_users)[valid_users_count], pw_entry->pw_name);
@@ -221,7 +208,7 @@ int check_cd(struct stat *fsobj_info, char ***valid_users, int *can_everyone)
     }
     endpwent();
 
-    if (valid_users_count == total_users_count)
+    if (valid_users_count == total_users_count) // (everyone)
     {
         *can_everyone = 1;
     }
@@ -234,7 +221,7 @@ int check_delete(struct stat *fsobj_info, struct stat *parentdir_info, char ***v
     struct passwd *pw_entry;
     int total_users_count = 0, valid_users_count = 0;
     int is_root = 0, has_w_perms_parent = 0, is_owner_file = 0, is_owner_parent = 0, has_wx_perms = 0;
-    int is_sticky = fsobj_info->st_mode & __S_ISVTX ? 1 : 0; // sticky bit only relevant for directories
+    int is_sticky = fsobj_info->st_mode & __S_ISVTX ? 1 : 0;
 
     setpwent();
     while ((pw_entry = getpwent()) != NULL)
@@ -242,8 +229,6 @@ int check_delete(struct stat *fsobj_info, struct stat *parentdir_info, char ***v
         /*
             NON-STICKY: has write AND execute bit
             STICKY: has write bit on parent directory AND (owns the files OR owns the parent directory)
-                t: no execute permission for others + sticky bit
-                T: execute permissions for others + sticky bit
             EITHER: OR is root
         */
         has_wx_perms = check_permissions_usr(pw_entry, fsobj_info, PBITS_WX) ||
@@ -294,6 +279,72 @@ int check_execute(struct stat *fsobj_info, char ***valid_users, int *can_everyon
         is_root = strcmp(pw_entry->pw_name, "root") == 0;
 
         if (has_x_perms || (is_root && is_executable))
+        {
+            add_valid_users_entry(valid_users, valid_users_count);
+            strcpy((*valid_users)[valid_users_count], pw_entry->pw_name);
+            valid_users_count++;
+        }
+        total_users_count++;
+    }
+    endpwent();
+
+    if (valid_users_count == total_users_count)
+    {
+        *can_everyone = 1;
+    }
+
+    return valid_users_count;
+}
+
+int check_ls_read_dir(struct stat *fsobj_info, char ***valid_users, int *can_everyone)
+{
+    struct passwd *pw_entry;
+    int total_users_count = 0, valid_users_count = 0;
+    int has_r_perms = 0, is_root = 0;
+
+    setpwent();
+    while ((pw_entry = getpwent()) != NULL)
+    {
+        // has read bit OR is root
+        has_r_perms = check_permissions_usr(pw_entry, fsobj_info, PBITS_R) ||
+                      check_permissions_grp(pw_entry, fsobj_info, PBITS_R, valid_users, valid_users_count) ||
+                      check_permissions_other(pw_entry, fsobj_info, PBITS_R);
+        is_root = strcmp(pw_entry->pw_name, "root") == 0;
+
+        if (has_r_perms || is_root)
+        {
+            add_valid_users_entry(valid_users, valid_users_count);
+            strcpy((*valid_users)[valid_users_count], pw_entry->pw_name);
+            valid_users_count++;
+        }
+        total_users_count++;
+    }
+    endpwent();
+
+    if (valid_users_count == total_users_count)
+    {
+        *can_everyone = 1;
+    }
+
+    return valid_users_count;
+}
+
+int check_ls_read_file_dev(struct stat *parentdir_info, char ***valid_users, int *can_everyone)
+{
+    struct passwd *pw_entry;
+    int total_users_count = 0, valid_users_count = 0;
+    int has_x_perms_parent = 0, is_root = 0;
+
+    setpwent();
+    while ((pw_entry = getpwent()) != NULL)
+    {
+        // has execute bit on parent directory OR is root
+        has_x_perms_parent = check_permissions_usr(pw_entry, parentdir_info, PBITS_X) ||
+                             check_permissions_grp(pw_entry, parentdir_info, PBITS_X, valid_users, valid_users_count) ||
+                             check_permissions_other(pw_entry, parentdir_info, PBITS_X);
+        is_root = strcmp(pw_entry->pw_name, "root") == 0;
+
+        if (has_x_perms_parent || is_root)
         {
             add_valid_users_entry(valid_users, valid_users_count);
             strcpy((*valid_users)[valid_users_count], pw_entry->pw_name);

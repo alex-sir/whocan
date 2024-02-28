@@ -29,12 +29,12 @@ extern void print_err_file(const char *fsobj);
  */
 extern void print_invalid_action(const char *action);
 /**
- * @brief frees all allocated memory for valid_users
+ * @brief add a valid user to valid_users
  *
- * @param valid_users array of strings containing usernames of valid users which will be freed
+ * @param valid_users array of strings containing usernames of valid users which a new valid user will be added to
  * @param valid_users_count number of valid users located in valid_users
  */
-extern void free_valid_users(char ***valid_users, int valid_users_count);
+extern void add_valid_users_entry(char ***valid_users, int valid_users_count);
 /**
  * @brief allocate more memory for valid_users
  *
@@ -42,6 +42,13 @@ extern void free_valid_users(char ***valid_users, int valid_users_count);
  * @param valid_users_count number of valid users located in valid_users
  */
 extern void realloc_valid_users(char ***valid_users, int valid_users_count);
+/**
+ * @brief frees all allocated memory for valid_users
+ *
+ * @param valid_users array of strings containing usernames of valid users which will be freed
+ * @param valid_users_count number of valid users located in valid_users
+ */
+extern void free_valid_users(char ***valid_users, int valid_users_count);
 /**
  * @brief print all valid users found to be able to perform an action
  *
