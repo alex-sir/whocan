@@ -296,7 +296,7 @@ int check_execute(struct stat *fsobj_info, char ***valid_users, int *can_everyon
     return valid_users_count;
 }
 
-int check_ls_read_dir(struct stat *fsobj_info, char ***valid_users, int *can_everyone)
+int check_ls_dir_read(struct stat *fsobj_info, char ***valid_users, int *can_everyone)
 {
     struct passwd *pw_entry;
     int total_users_count = 0, valid_users_count = 0;
@@ -329,7 +329,7 @@ int check_ls_read_dir(struct stat *fsobj_info, char ***valid_users, int *can_eve
     return valid_users_count;
 }
 
-int check_ls_read_file_dev(struct stat *parentdir_info, char ***valid_users, int *can_everyone)
+int check_ls_file_dev(struct stat *parentdir_info, char ***valid_users, int *can_everyone)
 {
     struct passwd *pw_entry;
     int total_users_count = 0, valid_users_count = 0;
@@ -345,6 +345,72 @@ int check_ls_read_file_dev(struct stat *parentdir_info, char ***valid_users, int
         is_root = strcmp(pw_entry->pw_name, "root") == 0;
 
         if (has_x_perms_parent || is_root)
+        {
+            add_valid_users_entry(valid_users, valid_users_count);
+            strcpy((*valid_users)[valid_users_count], pw_entry->pw_name);
+            valid_users_count++;
+        }
+        total_users_count++;
+    }
+    endpwent();
+
+    if (valid_users_count == total_users_count)
+    {
+        *can_everyone = 1;
+    }
+
+    return valid_users_count;
+}
+
+int check_write_dir(struct stat *fsobj_info, char ***valid_users, int *can_everyone)
+{
+    struct passwd *pw_entry;
+    int total_users_count = 0, valid_users_count = 0;
+    int has_wx_perms = 0, is_root = 0;
+
+    setpwent();
+    while ((pw_entry = getpwent()) != NULL)
+    {
+        // has write AND execute bit OR is root
+        has_wx_perms = check_permissions_usr(pw_entry, fsobj_info, PBITS_WX) ||
+                      check_permissions_grp(pw_entry, fsobj_info, PBITS_WX, valid_users, valid_users_count) ||
+                      check_permissions_other(pw_entry, fsobj_info, PBITS_WX);
+        is_root = strcmp(pw_entry->pw_name, "root") == 0;
+
+        if (has_wx_perms || is_root)
+        {
+            add_valid_users_entry(valid_users, valid_users_count);
+            strcpy((*valid_users)[valid_users_count], pw_entry->pw_name);
+            valid_users_count++;
+        }
+        total_users_count++;
+    }
+    endpwent();
+
+    if (valid_users_count == total_users_count)
+    {
+        *can_everyone = 1;
+    }
+
+    return valid_users_count;
+}
+
+int check_write_file_dev(struct stat *fsobj_info, char ***valid_users, int *can_everyone)
+{
+    struct passwd *pw_entry;
+    int total_users_count = 0, valid_users_count = 0;
+    int has_w_perms = 0, is_root = 0;
+
+    setpwent();
+    while ((pw_entry = getpwent()) != NULL)
+    {
+        // has write bit OR is root
+        has_w_perms = check_permissions_usr(pw_entry, fsobj_info, PBITS_W) ||
+                       check_permissions_grp(pw_entry, fsobj_info, PBITS_W, valid_users, valid_users_count) ||
+                       check_permissions_other(pw_entry, fsobj_info, PBITS_W);
+        is_root = strcmp(pw_entry->pw_name, "root") == 0;
+
+        if (has_w_perms || is_root)
         {
             add_valid_users_entry(valid_users, valid_users_count);
             strcpy((*valid_users)[valid_users_count], pw_entry->pw_name);

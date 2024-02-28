@@ -96,12 +96,12 @@ extern int check_permissions_grp(struct passwd *pw_entry, struct stat *fsobj_inf
  */
 extern int check_permissions_other(struct passwd *pw_entry, struct stat *fsobj_info, const int PBITS);
 /**
- * @brief check which users have permissions to "cd" into a directory
+ * @brief check which users have permissions to "cd" or "search" into a directory
  *
  * @param fsobj_info structure containing information about a directory
- * @param valid_users array of strings that will be filled with the usernames of users who can "cd"
- * @param can_everyone will indicate if ALL users can "cd"
- * @return int number of users that can "cd"
+ * @param valid_users array of strings that will be filled with the usernames of users who can "cd" or "search"
+ * @param can_everyone will indicate if ALL users can "cd" or "search"
+ * @return int number of users that can "cd" or "search"
  */
 extern int check_cd_search(struct stat *fsobj_info, char ***valid_users, int *can_everyone);
 /**
@@ -124,14 +124,14 @@ extern int check_delete(struct stat *fsobj_info, struct stat *parentdir_info, ch
  */
 extern int check_execute(struct stat *fsobj_info, char ***valid_users, int *can_everyone);
 /**
- * @brief check which users have permissions to "ls" a directory
+ * @brief check which users have permissions to "ls" a directory or "read" a directory, file, or device
  *
- * @param fsobj_info structure containing information about a directory
- * @param valid_users array of strings that will be filled with the usernames of users who can "ls"
- * @param can_everyone will indicate if ALL users can "ls"
- * @return int number of users that can "ls"
+ * @param fsobj_info structure containing information about a directory, file, or device
+ * @param valid_users array of strings that will be filled with the usernames of users who can "ls" or "read"
+ * @param can_everyone will indicate if ALL users can "ls" or "read"
+ * @return int number of users that can "ls" or "read"
  */
-extern int check_ls_read_dir(struct stat *fsobj_info, char ***valid_users, int *can_everyone);
+extern int check_ls_dir_read(struct stat *fsobj_info, char ***valid_users, int *can_everyone);
 /**
  * @brief check which users have permissions to "ls" a file or device
  *
@@ -140,6 +140,24 @@ extern int check_ls_read_dir(struct stat *fsobj_info, char ***valid_users, int *
  * @param can_everyone will indicate if ALL users can "ls"
  * @return int number of users that can "ls"
  */
-extern int check_ls_read_file_dev(struct stat *parentdir_info, char ***valid_users, int *can_everyone);
+extern int check_ls_file_dev(struct stat *parentdir_info, char ***valid_users, int *can_everyone);
+/**
+ * @brief check which users have permissions to "write" into directory
+ *
+ * @param fsobj_info structure containing information about a directory
+ * @param valid_users array of strings that will be filled with the usernames of users who can "write"
+ * @param can_everyone will indicate if ALL users can "write"
+ * @return int number of users that can "write"
+ */
+extern int check_write_dir(struct stat *fsobj_info, char ***valid_users, int *can_everyone);
+/**
+ * @brief check which users have permissions to "write" into a file or device
+ *
+ * @param fsobj_info structure containing information about a file or device
+ * @param valid_users array of strings that will be filled with the usernames of users who can "write"
+ * @param can_everyone will indicate if ALL users can "write"
+ * @return int number of users that can "write"
+ */
+extern int check_write_file_dev(struct stat *fsobj_info, char ***valid_users, int *can_everyone);
 
 #endif
