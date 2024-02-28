@@ -8,7 +8,7 @@
 #include "helpers.h"
 
 #include <stdio.h>    // for printf()
-#include <stdlib.h>   // for malloc()
+#include <stdlib.h>   // for malloc(), qsort()
 #include <string.h>   // for strcmp()
 #include <sys/stat.h> // for struct stat
 #include <unistd.h>   // for sysconf()
@@ -78,7 +78,13 @@ int main(int argc, char *argv[])
     }
     else if (strcmp(action, "execute") == 0) // file
     {
-        printf("execute\n");
+        if (checkfsobj(fsobj, &fsobj_info) == -1 || checkfsobj_file(fsobj, &fsobj_info) == -1)
+        {
+            fprintf(stderr, "%s: Not a file\n", fsobj);
+            free_valid_users(&valid_users, INIT_NUM_USERS);
+            exit(EXIT_FAILURE);
+        }
+        valid_users_count = check_execute(&fsobj_info, &valid_users, &can_everyone);
     }
     else if (strcmp(action, "ls") == 0) // directory OR file, device
     {

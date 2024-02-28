@@ -8,7 +8,7 @@
 #define CHECKACTIONS
 
 #include <stdio.h>     // for printf()
-#include <stdlib.h>    // for exit(), qsort()
+#include <stdlib.h>    // for exit()
 #include <unistd.h>    // for stat()
 #include <sys/stat.h>  // for struct stat
 #include <pwd.h>       // for getpwent(), setpwent(), endpwent()
@@ -121,5 +121,14 @@ extern int check_cd(struct stat *fsobj_info, char ***valid_users, int *can_every
  * @return int number of users that can "delete"
  */
 extern int check_delete(struct stat *fsobj_info, struct stat *parentdir_info, char ***valid_users, int *can_everyone);
+/**
+ * @brief check which users have permissions to "execute" a file
+ *
+ * @param fsobj_info structure containing information about a file
+ * @param valid_users array of strings that will be filled with the usernames of users who can "execute"
+ * @param can_everyone will indicate if ALL users can "execute"
+ * @return int number of users that can "execute"
+ */
+extern int check_execute(struct stat *fsobj_info, char ***valid_users, int *can_everyone);
 
 #endif

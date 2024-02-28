@@ -200,15 +200,18 @@ int check_cd(struct stat *fsobj_info, char ***valid_users, int *can_everyone)
 {
     struct passwd *pw_entry;
     int total_users_count = 0, valid_users_count = 0;
+    int has_x_perms = 0, is_root = 0;
 
     setpwent();
     while ((pw_entry = getpwent()) != NULL)
     {
         // has execute bit OR is root
-        if (strcmp(pw_entry->pw_name, "root") == 0 ||
-            check_permissions_usr(pw_entry, fsobj_info, PBITS_X) ||
-            check_permissions_grp(pw_entry, fsobj_info, PBITS_X, valid_users, valid_users_count) ||
-            check_permissions_other(pw_entry, fsobj_info, PBITS_X))
+        has_x_perms = check_permissions_usr(pw_entry, fsobj_info, PBITS_X) ||
+                      check_permissions_grp(pw_entry, fsobj_info, PBITS_X, valid_users, valid_users_count) ||
+                      check_permissions_other(pw_entry, fsobj_info, PBITS_X);
+        is_root = strcmp(pw_entry->pw_name, "root") == 0;
+
+        if (has_x_perms || is_root)
         {
             add_valid_users_entry(valid_users, valid_users_count);
             strcpy((*valid_users)[valid_users_count], pw_entry->pw_name);
@@ -230,31 +233,67 @@ int check_delete(struct stat *fsobj_info, struct stat *parentdir_info, char ***v
 {
     struct passwd *pw_entry;
     int total_users_count = 0, valid_users_count = 0;
-    int is_sticky = fsobj_info->st_mode & __S_ISVTX ? 1 : 0; // sticky bit only relevant for directories
     int is_root = 0, has_w_perms_parent = 0, is_owner_file = 0, is_owner_parent = 0, has_wx_perms = 0;
+    int is_sticky = fsobj_info->st_mode & __S_ISVTX ? 1 : 0; // sticky bit only relevant for directories
 
     setpwent();
     while ((pw_entry = getpwent()) != NULL)
     {
         /*
+            NON-STICKY: has write AND execute bit
             STICKY: has write bit on parent directory AND (owns the files OR owns the parent directory)
                 t: no execute permission for others + sticky bit
                 T: execute permissions for others + sticky bit
-            NON-STICKY: has write AND execute bit
-            EITHER: is root
+            EITHER: OR is root
         */
-        is_root = strcmp(pw_entry->pw_name, "root") == 0;
+        has_wx_perms = check_permissions_usr(pw_entry, fsobj_info, PBITS_WX) ||
+                       check_permissions_grp(pw_entry, fsobj_info, PBITS_WX, valid_users, valid_users_count) ||
+                       check_permissions_other(pw_entry, fsobj_info, PBITS_WX);
         has_w_perms_parent = check_permissions_usr(pw_entry, parentdir_info, PBITS_W) ||
                              check_permissions_grp(pw_entry, parentdir_info, PBITS_W, valid_users, valid_users_count) ||
                              check_permissions_other(pw_entry, parentdir_info, PBITS_W);
         is_owner_file = pw_entry->pw_uid == fsobj_info->st_uid;
         is_owner_parent = pw_entry->pw_uid == parentdir_info->st_uid;
-        has_wx_perms = check_permissions_usr(pw_entry, fsobj_info, PBITS_WX) ||
-                       check_permissions_grp(pw_entry, fsobj_info, PBITS_WX, valid_users, valid_users_count) ||
-                       check_permissions_other(pw_entry, fsobj_info, PBITS_WX);
-        if (is_root ||
+        is_root = strcmp(pw_entry->pw_name, "root") == 0;
+
+        if ((!is_sticky && has_wx_perms) ||
             (is_sticky && has_w_perms_parent && (is_owner_file || is_owner_parent)) ||
-            (!is_sticky && has_wx_perms))
+            is_root)
+        {
+            add_valid_users_entry(valid_users, valid_users_count);
+            strcpy((*valid_users)[valid_users_count], pw_entry->pw_name);
+            valid_users_count++;
+        }
+        total_users_count++;
+    }
+    endpwent();
+
+    if (valid_users_count == total_users_count)
+    {
+        *can_everyone = 1;
+    }
+
+    return valid_users_count;
+}
+
+int check_execute(struct stat *fsobj_info, char ***valid_users, int *can_everyone)
+{
+    struct passwd *pw_entry;
+    int total_users_count = 0, valid_users_count = 0;
+    int has_x_perms = 0, is_root = 0;
+    // execute bit MUST be set on at least one of the user, group, or other permission groups for the file to be executable
+    int is_executable = fsobj_info->st_mode & S_IXUSR || fsobj_info->st_mode & S_IXGRP || fsobj_info->st_mode & S_IXOTH ? 1 : 0;
+
+    setpwent();
+    while ((pw_entry = getpwent()) != NULL)
+    {
+        // has execute bit OR is root AND has execute bit set on at least one permission group
+        has_x_perms = check_permissions_usr(pw_entry, fsobj_info, PBITS_X) ||
+                      check_permissions_grp(pw_entry, fsobj_info, PBITS_X, valid_users, valid_users_count) ||
+                      check_permissions_other(pw_entry, fsobj_info, PBITS_X);
+        is_root = strcmp(pw_entry->pw_name, "root") == 0;
+
+        if (has_x_perms || (is_root && is_executable))
         {
             add_valid_users_entry(valid_users, valid_users_count);
             strcpy((*valid_users)[valid_users_count], pw_entry->pw_name);
