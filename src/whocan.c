@@ -59,7 +59,9 @@ int main(int argc, char *argv[])
     }
 
     // parent directory of the filesystem object
-    char *parentdir = dirname(fsobj);
+    char temp_parentdir[PATHNAME_MAX];
+    strcpy(temp_parentdir, fsobj);
+    char *parentdir = dirname(temp_parentdir);
     struct stat parentdir_info;
     if (stat(parentdir, &parentdir_info) == -1)
     {

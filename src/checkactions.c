@@ -220,20 +220,22 @@ int check_delete(struct stat *fsobj_info, struct stat *parentdir_info, char ***v
 {
     struct passwd *pw_entry;
     int total_users_count = 0, valid_users_count = 0;
-    int is_root = 0, has_w_perms_parent = 0, is_owner_file = 0, is_owner_parent = 0, has_wx_perms = 0;
-    int is_sticky = fsobj_info->st_mode & __S_ISVTX ? 1 : 0;
+    int is_root = 0, has_w_perms_parent = 0, is_owner_file = 0, is_owner_parent = 0, has_wx_perms_parent = 0;
+    int is_sticky = parentdir_info->st_mode & __S_ISVTX ? 1 : 0;
 
     setpwent();
     while ((pw_entry = getpwent()) != NULL)
     {
         /*
             NON-STICKY: has write AND execute bit
+                permissions on the file are irrelevant, only the permissions on the parent directory matter
             STICKY: has write bit on parent directory AND (owns the files OR owns the parent directory)
+                permissions on the file are still irrelevant, but OWNER of file matters
             EITHER: OR is root
         */
-        has_wx_perms = check_permissions_usr(pw_entry, fsobj_info, PBITS_WX) ||
-                       check_permissions_grp(pw_entry, fsobj_info, PBITS_WX, valid_users, valid_users_count) ||
-                       check_permissions_other(pw_entry, fsobj_info, PBITS_WX);
+        has_wx_perms_parent = check_permissions_usr(pw_entry, parentdir_info, PBITS_WX) ||
+                       check_permissions_grp(pw_entry, parentdir_info, PBITS_WX, valid_users, valid_users_count) ||
+                       check_permissions_other(pw_entry, parentdir_info, PBITS_WX);
         has_w_perms_parent = check_permissions_usr(pw_entry, parentdir_info, PBITS_W) ||
                              check_permissions_grp(pw_entry, parentdir_info, PBITS_W, valid_users, valid_users_count) ||
                              check_permissions_other(pw_entry, parentdir_info, PBITS_W);
@@ -241,7 +243,7 @@ int check_delete(struct stat *fsobj_info, struct stat *parentdir_info, char ***v
         is_owner_parent = pw_entry->pw_uid == parentdir_info->st_uid;
         is_root = strcmp(pw_entry->pw_name, "root") == 0;
 
-        if ((!is_sticky && has_wx_perms) ||
+        if ((!is_sticky && has_wx_perms_parent) ||
             (is_sticky && has_w_perms_parent && (is_owner_file || is_owner_parent)) ||
             is_root)
         {
@@ -373,8 +375,8 @@ int check_write_dir(struct stat *fsobj_info, char ***valid_users, int *can_every
     {
         // has write AND execute bit OR is root
         has_wx_perms = check_permissions_usr(pw_entry, fsobj_info, PBITS_WX) ||
-                      check_permissions_grp(pw_entry, fsobj_info, PBITS_WX, valid_users, valid_users_count) ||
-                      check_permissions_other(pw_entry, fsobj_info, PBITS_WX);
+                       check_permissions_grp(pw_entry, fsobj_info, PBITS_WX, valid_users, valid_users_count) ||
+                       check_permissions_other(pw_entry, fsobj_info, PBITS_WX);
         is_root = strcmp(pw_entry->pw_name, "root") == 0;
 
         if (has_wx_perms || is_root)
@@ -406,8 +408,8 @@ int check_write_file_dev(struct stat *fsobj_info, char ***valid_users, int *can_
     {
         // has write bit OR is root
         has_w_perms = check_permissions_usr(pw_entry, fsobj_info, PBITS_W) ||
-                       check_permissions_grp(pw_entry, fsobj_info, PBITS_W, valid_users, valid_users_count) ||
-                       check_permissions_other(pw_entry, fsobj_info, PBITS_W);
+                      check_permissions_grp(pw_entry, fsobj_info, PBITS_W, valid_users, valid_users_count) ||
+                      check_permissions_other(pw_entry, fsobj_info, PBITS_W);
         is_root = strcmp(pw_entry->pw_name, "root") == 0;
 
         if (has_w_perms || is_root)
