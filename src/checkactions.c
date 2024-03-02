@@ -88,8 +88,6 @@ int check_permissions_usr(struct passwd *pw_entry, struct stat *fsobj_info, cons
         case PBITS_RWX:
             return ((fsobj_info->st_mode & S_IRUSR) && (fsobj_info->st_mode & S_IWUSR) && (fsobj_info->st_mode & S_IXUSR)) ? 1 : 0;
             break;
-        default:
-            break;
         }
     }
 
@@ -140,8 +138,6 @@ int check_permissions_grp(struct passwd *pw_entry, struct stat *fsobj_info, cons
             case PBITS_RWX:
                 return ((fsobj_info->st_mode & S_IRGRP) && (fsobj_info->st_mode & S_IWGRP) && (fsobj_info->st_mode & S_IXGRP)) ? 1 : 0;
                 break;
-            default:
-                break;
             }
         }
     }
@@ -176,8 +172,6 @@ int check_permissions_other(struct passwd *pw_entry, struct stat *fsobj_info, co
     case PBITS_RWX:
         return ((fsobj_info->st_mode & S_IROTH) && (fsobj_info->st_mode & S_IWOTH) && (fsobj_info->st_mode & S_IXOTH)) ? 1 : 0;
         break;
-    default:
-        break;
     }
 
     return 0;
@@ -201,7 +195,7 @@ int check_cd_search(struct stat *fsobj_info, char ***valid_users, int *can_every
         if (has_x_perms || is_root) // check that it's a valid user
         {
             add_valid_users_entry(valid_users, valid_users_count);
-            strcpy((*valid_users)[valid_users_count], pw_entry->pw_name);
+            strncpy((*valid_users)[valid_users_count], pw_entry->pw_name, NAME_MAX);
             valid_users_count++;
         }
         total_users_count++;
@@ -228,14 +222,14 @@ int check_delete(struct stat *fsobj_info, struct stat *parentdir_info, char ***v
     {
         /*
             NON-STICKY: has write AND execute bit
-                permissions on the file are irrelevant, only the permissions on the parent directory matter
+                permissions on the file are irrelevant, only the permissions on the PARENT directory matter
             STICKY: has write bit on parent directory AND (owns the files OR owns the parent directory)
                 permissions on the file are still irrelevant, but OWNER of file matters
             EITHER: OR is root
         */
         has_wx_perms_parent = check_permissions_usr(pw_entry, parentdir_info, PBITS_WX) ||
-                       check_permissions_grp(pw_entry, parentdir_info, PBITS_WX, valid_users, valid_users_count) ||
-                       check_permissions_other(pw_entry, parentdir_info, PBITS_WX);
+                              check_permissions_grp(pw_entry, parentdir_info, PBITS_WX, valid_users, valid_users_count) ||
+                              check_permissions_other(pw_entry, parentdir_info, PBITS_WX);
         has_w_perms_parent = check_permissions_usr(pw_entry, parentdir_info, PBITS_W) ||
                              check_permissions_grp(pw_entry, parentdir_info, PBITS_W, valid_users, valid_users_count) ||
                              check_permissions_other(pw_entry, parentdir_info, PBITS_W);
@@ -248,7 +242,7 @@ int check_delete(struct stat *fsobj_info, struct stat *parentdir_info, char ***v
             is_root)
         {
             add_valid_users_entry(valid_users, valid_users_count);
-            strcpy((*valid_users)[valid_users_count], pw_entry->pw_name);
+            strncpy((*valid_users)[valid_users_count], pw_entry->pw_name, NAME_MAX);
             valid_users_count++;
         }
         total_users_count++;
@@ -283,7 +277,7 @@ int check_execute(struct stat *fsobj_info, char ***valid_users, int *can_everyon
         if (has_x_perms || (is_root && is_executable))
         {
             add_valid_users_entry(valid_users, valid_users_count);
-            strcpy((*valid_users)[valid_users_count], pw_entry->pw_name);
+            strncpy((*valid_users)[valid_users_count], pw_entry->pw_name, NAME_MAX);
             valid_users_count++;
         }
         total_users_count++;
@@ -316,7 +310,7 @@ int check_ls_dir_read(struct stat *fsobj_info, char ***valid_users, int *can_eve
         if (has_r_perms || is_root)
         {
             add_valid_users_entry(valid_users, valid_users_count);
-            strcpy((*valid_users)[valid_users_count], pw_entry->pw_name);
+            strncpy((*valid_users)[valid_users_count], pw_entry->pw_name, NAME_MAX);
             valid_users_count++;
         }
         total_users_count++;
@@ -349,7 +343,7 @@ int check_ls_file_dev(struct stat *parentdir_info, char ***valid_users, int *can
         if (has_x_perms_parent || is_root)
         {
             add_valid_users_entry(valid_users, valid_users_count);
-            strcpy((*valid_users)[valid_users_count], pw_entry->pw_name);
+            strncpy((*valid_users)[valid_users_count], pw_entry->pw_name, NAME_MAX);
             valid_users_count++;
         }
         total_users_count++;
@@ -382,7 +376,7 @@ int check_write_dir(struct stat *fsobj_info, char ***valid_users, int *can_every
         if (has_wx_perms || is_root)
         {
             add_valid_users_entry(valid_users, valid_users_count);
-            strcpy((*valid_users)[valid_users_count], pw_entry->pw_name);
+            strncpy((*valid_users)[valid_users_count], pw_entry->pw_name, NAME_MAX);
             valid_users_count++;
         }
         total_users_count++;
@@ -415,7 +409,7 @@ int check_write_file_dev(struct stat *fsobj_info, char ***valid_users, int *can_
         if (has_w_perms || is_root)
         {
             add_valid_users_entry(valid_users, valid_users_count);
-            strcpy((*valid_users)[valid_users_count], pw_entry->pw_name);
+            strncpy((*valid_users)[valid_users_count], pw_entry->pw_name, NAME_MAX);
             valid_users_count++;
         }
         total_users_count++;
