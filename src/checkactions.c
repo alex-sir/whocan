@@ -111,7 +111,10 @@ int check_permissions_grp(struct passwd *pw_entry, struct stat *fsobj_info, cons
 
     for (size_t i = 0; i < num_grps; i++)
     {
-        grp_entry = getgrgid(grps[i]);
+        if ((grp_entry = getgrgid(grps[i])) == NULL) // could not get group entry
+        {
+            continue;
+        }
         if (fsobj_info->st_gid == grp_entry->gr_gid) // current group is "group" owner of the file
         {
             free(grps);
@@ -263,7 +266,7 @@ int check_execute(struct stat *fsobj_info, char ***valid_users, int *can_everyon
     int total_users_count = 0, valid_users_count = 0;
     int has_x_perms = 0, is_root = 0;
     // execute bit MUST be set on at least one of the user, group, or other permission groups for the file to be executable
-    int is_executable = fsobj_info->st_mode & S_IXUSR || fsobj_info->st_mode & S_IXGRP || fsobj_info->st_mode & S_IXOTH ? 1 : 0;
+    int is_executable = (fsobj_info->st_mode & S_IXUSR || fsobj_info->st_mode & S_IXGRP || fsobj_info->st_mode & S_IXOTH) ? 1 : 0;
 
     setpwent();
     while ((pw_entry = getpwent()) != NULL)
