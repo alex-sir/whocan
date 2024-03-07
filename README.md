@@ -1,6 +1,6 @@
 # Whocan
 
-Prints a list of the users on a Unix-like system that can perform a specified action on a file, directory, or device based on the permissions set on that filesystem object.
+Prints a list of the users on a Unix-like system that can perform a specified action on a file, directory, or device based on the permissions and owners of a filesystem object.
 
 ## How To Use
 

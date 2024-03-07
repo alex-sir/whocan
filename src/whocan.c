@@ -18,14 +18,12 @@
 
 int main(int argc, char *argv[])
 {
-    // can't get max sizes
-    if (PATHNAME_MAX == -1 || NAME_MAX == -1)
+    if (PATHNAME_MAX == -1 || NAME_MAX == -1) // can't get max sizes
     {
         print_err_exit();
     }
 
-    // invalid number of arguments
-    if (argc != 3)
+    if (argc != 3) // invalid number of arguments
     {
         printf("Usage: ./whocan [ACTION] [FSOBJ]\n");
         exit(EXIT_FAILURE);
